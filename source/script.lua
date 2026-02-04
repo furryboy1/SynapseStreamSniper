@@ -1,20 +1,18 @@
 --[[
-
     Synapse Stream Sniper
     Usually used for Synapse Z
-    
+
     Credits:
         Originally made by Acrillis (Synapse X version)
         Re-Designed by furryboy.1
         With help from _exec4tble_
-
 ]]
 
 local Screenguini = Instance.new("ScreenGui")
 local Frame = Instance.new("Frame")
-local cornerFrame:UICorner = Instance.new("UICorner",Frame)
+local cornerFrame: UICorner = Instance.new("UICorner", Frame)
 local TextLabel = Instance.new("TextLabel")
-local tittleCorner:UICorner = Instance.new("UICorner",TextLabel)
+local tittleCorner: UICorner = Instance.new("UICorner", TextLabel)
 local TextLabel_2 = Instance.new("TextLabel")
 local UsernameBox = Instance.new("TextBox")
 local TextLabel_3 = Instance.new("TextLabel")
@@ -51,8 +49,8 @@ TextLabel.Text = "<b>Synapse Stream Sniper</b>"
 TextLabel.RichText = true
 TextLabel.TextSize = 24.000
 
-cornerFrame.CornerRadius = UDim.new(0,8)
-tittleCorner.CornerRadius = UDim.new(0,8)
+cornerFrame.CornerRadius = UDim.new(0, 8)
+tittleCorner.CornerRadius = UDim.new(0, 8)
 
 TextLabel_2.Parent = Frame
 TextLabel_2.Active = true
@@ -180,218 +178,235 @@ GamerPicture.BorderSizePixel = 2
 GamerPicture.BorderColor3 = Color3.fromRGB(89, 89, 89)
 GamerPicture.Image = "rbxasset://textures/ui/GuiImagePlaceholder.png"
 
-if shared.STREAM_SNIPER then
-   shared.STREAM_SNIPER:Destroy()
+if getgenv().STREAM_SNIPER then
+	getgenv().STREAM_SNIPER:Destroy()
 end
-shared.STREAM_SNIPER = Screenguini
+getgenv().STREAM_SNIPER = Screenguini
 
 local searching = false
 local confirm = false
 
 local function HttpGet(url)
-    return pcall(HttpService.JSONDecode, HttpService, game:HttpGet(url))
+	return pcall(HttpService.JSONDecode, HttpService, game:HttpGet(url))
 end
 
 local function Status(text, tout)
-StartButton.Text = text
+	StartButton.Text = text
 
-   if tout then
-       task.delay(tout, function()
-           if StartButton.Text == text then
-               searching = false
-               StartButton.Text = "Start"    
-           end
-       end)
-   end
+	if tout then
+		task.delay(tout, function()
+			if StartButton.Text == text then
+				searching = false
+				StartButton.Text = "Start"
+			end
+		end)
+	end
 end
 
 local function getServers(id, cursor)
-   local fullurl = "https://games.roblox.com/v1/games/".. id .."/servers/Public?limit=100"
-   -- local fullurl = "https://api.iyr.lol/servers?placeId=".. id .."&excludeFullGames=false&Limit=100"
-   if cursor then
-       fullurl = "&cursor=".. cursor
-   end
-   return HttpGet(fullurl)
+	local fullurl =
+		`https://games.roblox.com/v1/games/{id}/servers/Public?limit=100&sortOrder=Desc&excludeFullGames=true`
+	if cursor then
+		fullurl = "&cursor=" .. cursor
+	end
+	return HttpGet(fullurl)
 end
 
 local function fetchThumbs(tokens)
-   local payload = {
-       Url = "https://thumbnails.roblox.com/v1/batch",
-       Headers = {
-           ["Content-Type"] = "application/json"
-       },
-       Method = "POST",
-       Body = {}
-   }
+	local payload = {
+		Url = "https://thumbnails.roblox.com/v1/batch",
+		Headers = {
+			["Content-Type"] = "application/json",
+		},
+		Method = "POST",
+		Body = {},
+	}
 
-   for _, token in ipairs(tokens) do
-       table.insert(payload.Body, {
-           requestId = "0:".. token ..":AvatarHeadshot:150x150:png:regular",
-           type = "AvatarHeadShot",
-           targetId = 0,
-           token = token,
-           format = "png",
-           size = "150x150"
-       })
-   end
+	for _, token in ipairs(tokens) do
+		table.insert(payload.Body, {
+			requestId = "0:" .. token .. ":AvatarHeadshot:150x150:png:regular",
+			type = "AvatarHeadShot",
+			targetId = 0,
+			token = token,
+			format = "png",
+			size = "150x150",
+		})
+	end
 
-   payload.Body = HttpService:JSONEncode(payload.Body)
-   local result = request(payload)
-   local s, data = pcall(HttpService.JSONDecode, HttpService, result.Body)
-   return s, data and data.data or data
+	payload.Body = HttpService:JSONEncode(payload.Body)
+	local result = request(payload)
+	local s, data = pcall(HttpService.JSONDecode, HttpService, result.Body)
+	return s, data and data.data or data
 end
 
 local function teleport(placeId, guid)
-   TeleportService:TeleportToPlaceInstance(placeId, guid)
+	TeleportService:TeleportToPlaceInstance(placeId, guid)
 end
-
 
 local threads = 30
 
 StartButton.MouseButton1Click:Connect(function()
-   if confirm then
-       confirm = false
-       searching = false
-       Status("Cancelled")
-       task.wait(1)
-       Status("Start")
-       return
-   end
-   if searching then
-    confirm = true
-    local old = StartButton.Text
-    Status("Are you sure you want to cancel?")
-    task.delay(5, function()
-        if "Are you sure you want to cancel?" == StartButton.Text then
-            confirm = false
-            StartButton.Text = old
-        end
-    end)
-    return
-end
+	if confirm then
+		confirm = false
+		searching = false
+		Status("Cancelled")
+		task.wait(1)
+		Status("Start")
+		return
+	end
+	if searching then
+		confirm = true
+		local old = StartButton.Text
+		Status("Are you sure you want to cancel?")
+		task.delay(5, function()
+			if "Are you sure you want to cancel?" == StartButton.Text then
+				confirm = false
+				StartButton.Text = old
+			end
+		end)
+		return
+	end
 
-searching = true
+	searching = true
 
--- User ID
-Status("Getting User ID...")
+	-- User ID
+	Status("Getting User ID...")
 
-local s, Username, UserId = pcall(function() -- TODO FIX: fix for only numbers players
-    local userId = tonumber(UsernameBox.Text) or Players:GetUserIdFromNameAsync(UsernameBox.Text)
-    local username = Players:GetNameFromUserIdAsync(userId)
-return username, userId
-end)
+	local s, Username, UserId = pcall(function() -- TODO FIX: fix for only numbers players
+		local userId = tonumber(UsernameBox.Text) or Players:GetUserIdFromNameAsync(UsernameBox.Text)
+		local username = Players:GetNameFromUserIdAsync(userId)
+		return username, userId
+	end)
 
-if not s then
-return Status("Username Or UserID Not Found!", 3)
-end
+	if not s then
+		return Status("Username Or UserID Not Found!", 3)
+	end
 
-   local s, thumbUrl = pcall(Players.GetUserThumbnailAsync, Players, UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size150x150)
+	local s, thumbUrl = pcall(
+		Players.GetUserThumbnailAsync,
+		Players,
+		UserId,
+		Enum.ThumbnailType.HeadShot,
+		Enum.ThumbnailSize.Size150x150
+	)
 
-   UsernameLabel.Text = Username
-   UserIdLabel.Text = UserId
-   GamerPicture.Image = s and thumbUrl or ""
+	UsernameLabel.Text = Username
+	UserIdLabel.Text = UserId
+	GamerPicture.Image = s and thumbUrl or ""
 
-   Status("Getting User's Thumbnail...")
-   local s, response = HttpGet("https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds=" .. UserId .. "&format=Png&size=150x150&isCircular=false")
-   --local s, response = HttpGet("https://www.roblox.com/headshot-thumbnail/json?userId=" .. UserId .. "&width=150&height=150")
-   local thumbnail = s and response['data'][1].imageUrl
+	Status("Getting User's Thumbnail...")
+	local s, response = HttpGet(
+		"https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds="
+			.. UserId
+			.. "&format=Png&size=150x150&isCircular=false"
+	)
+	--local s, response = HttpGet("https://www.roblox.com/headshot-thumbnail/json?userId=" .. UserId .. "&width=150&height=150")
+	local thumbnail = s and response["data"][1].imageUrl
 
-   Status("Searching for (".. UserId ..")")
-   
-   -- Place ID
-   Status("Getting Place ID...")
-   
-   local placeId = tonumber(PlaceIdBox.Text)
+	Status("Searching for (" .. UserId .. ")")
 
-   if PlaceIdBox.Text:gsub("%s", "") == "" then
-       placeId = game.PlaceId
+	-- Place ID
+	Status("Getting Place ID...")
 
-   elseif not placeId then
-       Status("Invalid Place ID!", 1)
-       return
-   end
-   
-   Status("Searching...")
-   local cursor = nil
-   local searched = 0
-   local maxSearchs = 0
-   local players = 0
-   -- Server search
-   while searching do
-       if not Screenguini or not Screenguini.Parent then
-           break
-       end
-       local s, result = getServers(placeId, cursor)
+	local placeId = tonumber(PlaceIdBox.Text)
 
-       if s then
-           local servers = result.data
-           cursor = result.nextPageCursor
-           
-           if StartButton.Text:match("Searching") then
-               maxSearchs = maxSearchs + #servers
-               Status(searched .."/".. maxSearchs .." Servers Scanned! Players Found: ".. players)
-           end
+	if PlaceIdBox.Text:gsub("%s", "") == "" then
+		placeId = game.PlaceId
+	elseif not placeId then
+		Status("Invalid Place ID!", 1)
+		return
+	end
 
-           -- Search all servers
-           for index, server in ipairs(servers) do
-               local function fetchServer()
-                   local s, thumbs = fetchThumbs(server.playerTokens)
-                   if s then
-                       players = players + #thumbs
-                       for _, playerThumb in ipairs(thumbs) do
-                           if playerThumb.imageUrl then
-                               if playerThumb.imageUrl == thumbnail then
-                                   searching = false
-                                   Status("Found Player! Teleporting...")
+	Status("Searching...")
+	local cursor = nil
+	local searched = 0
+	local maxSearchs = 0
+	local players = 0
+	-- Server search
+	while searching do
+		if not Screenguini or not Screenguini.Parent then
+			break
+		end
+		local s, result = getServers(placeId, cursor)
 
-                                   teleport(placeId, server.id)
-                                   local try = 0
-                                   Player.OnTeleport:Connect(function(teleportState)
-                                       if teleportState == Enum.TeleportState.Failed then
-                                           try = try + 1
-                                           Status("Teleport Failed, Try #".. try)
-                                           teleport(placeId, server.id)
-                                       end
-                                   end)
-                               end
-                           else
-                               Status("Token Failed! ID:", playerThumb.requestId, playerThumb.state, playerThumb.errorMessage)
-                               print("Token Failed! ID:", playerThumb.requestId, playerThumb.state, playerThumb.errorMessage)
-                           end
-                       end
-                   else
-                       Status("Token Failed!", s, thumb)
-                       print("Token Failed!", s, thumbs)
-                   end
-               end
-               searched = searched + 1
-               if index % threads ~= 0 then
-                   task.spawn(fetchServer)
-                   task.wait()
+		if s then
+			local servers = result.data
+			cursor = result.nextPageCursor
 
-               else
-                   fetchServer()
-               end
+			if StartButton.Text:match("Searching") then
+				maxSearchs = maxSearchs + #servers
+				Status(searched .. "/" .. maxSearchs .. " Servers Scanned! Players Found: " .. players)
+			end
 
-               if searching then
-                   Status(searched .."/".. maxSearchs .." Servers Scanned, Players Found: ".. players)
-               end
-           end
-           
-           -- Player not found
-           if not cursor then
-               break
-           end
-       else
-           return Status("Failed to Find Servers!", 3)
-       end
+			-- Search all servers
+			for index, server in ipairs(servers) do
+				local function fetchServer()
+					local s, thumbs = fetchThumbs(server.playerTokens)
+					if s then
+						players = players + #thumbs
+						for _, playerThumb in ipairs(thumbs) do
+							if playerThumb.imageUrl then
+								if playerThumb.imageUrl == thumbnail then
+									searching = false
+									Status("Found Player! Teleporting...")
 
-       task.wait()
-   end
-   
-   if searching then
-       Status("Failed to Find ".. Username .."!", 3)
-   end
+									teleport(placeId, server.id)
+									local try = 0
+									Player.OnTeleport:Connect(function(teleportState)
+										if teleportState == Enum.TeleportState.Failed then
+											try = try + 1
+											Status("Teleport Failed, Try #" .. try)
+											teleport(placeId, server.id)
+										end
+									end)
+								end
+							else
+								Status(
+									"Token Failed! ID:",
+									playerThumb.requestId,
+									playerThumb.state,
+									playerThumb.errorMessage
+								)
+								print(
+									"Token Failed! ID:",
+									playerThumb.requestId,
+									playerThumb.state,
+									playerThumb.errorMessage
+								)
+							end
+						end
+					else
+						Status("Token Failed!", s, thumb)
+						print("Token Failed!", s, thumbs)
+					end
+				end
+				searched = searched + 1
+				if index % threads ~= 0 then
+					task.spawn(fetchServer)
+					task.wait()
+				else
+					fetchServer()
+				end
+
+				if searching then
+					Status(searched .. "/" .. maxSearchs .. " Servers Scanned, Players Found: " .. players)
+				end
+			end
+
+			-- Player not found
+			if not cursor then
+				break
+			end
+		else
+			return Status("Failed to Find Servers!", 3)
+		end
+
+		task.wait()
+	end
+
+	if searching then
+		Status("Failed to Find " .. Username .. "!", 3)
+	end
 end)
 
 PlaceIdBox.Text = game.PlaceId
